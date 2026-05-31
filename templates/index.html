@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Virality Predictor</title>
+    <style>
+        :root {
+            --bg-dark: #050510;
+            --primary-glow: #00f2fe;
+            --secondary-glow: #8e2de2;
+            --glass-bg: rgba(20, 22, 35, 0.5);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: var(--bg-dark); color: var(--text-main); margin: 0; min-height: 100vh; overflow-x: hidden; }
+        
+        /* Background 3D Animated Blobs */
+        .blob { position: fixed; border-radius: 50%; filter: blur(100px); z-index: -1; opacity: 0.5; animation: float 10s ease-in-out infinite; }
+        .blob-1 { top: -100px; left: -100px; width: 400px; height: 400px; background: var(--secondary-glow); }
+        .blob-2 { bottom: -100px; right: -100px; width: 500px; height: 500px; background: var(--primary-glow); animation-delay: -5s; }
+        @keyframes float { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-40px) scale(1.1); } }
+
+        /* Top Navigation Bar */
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; background: rgba(10, 12, 20, 0.7); backdrop-filter: blur(16px); border-bottom: 1px solid var(--glass-border); position: sticky; top: 0; z-index: 100; }
+        .navbar h1 { margin: 0; font-size: 20px; background: linear-gradient(90deg, var(--primary-glow), #4facfe); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .nav-links a { text-decoration: none; color: var(--text-main); margin-left: 20px; font-weight: 500; font-size: 14px; padding: 8px 16px; border-radius: 8px; background: rgba(255,255,255,0.05); transition: 0.3s; }
+        .nav-links a:hover { background: rgba(255,255,255,0.1); box-shadow: 0 0 15px rgba(255,255,255,0.1); }
+        .nav-links .logout { color: #ff4b4b; background: rgba(255, 75, 75, 0.1); }
+        
+        .container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        
+        /* Glassmorphism Cards */
+        .glass-card { background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 16px; padding: 35px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); transition: transform 0.3s, box-shadow 0.3s; margin-bottom: 30px; }
+        .glass-card:hover { transform: translateY(-5px); box-shadow: 0 15px 50px rgba(0, 242, 254, 0.1); }
+        
+        /* Premium Input Fields */
+        .form-group { margin-bottom: 20px; position: relative; }
+        label { display: block; margin-bottom: 8px; font-weight: 500; color: var(--text-muted); font-size: 14px; }
+        .input-icon { position: absolute; left: 15px; top: 38px; color: var(--text-muted); font-size: 16px; }
+        input { width: 100%; padding: 14px 14px 14px 45px; background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); border-radius: 10px; color: white; font-size: 15px; box-sizing: border-box; transition: all 0.3s ease; }
+        input:focus { outline: none; border-color: var(--primary-glow); box-shadow: 0 0 15px rgba(0, 242, 254, 0.3); background: rgba(0,0,0,0.6); }
+        
+        /* Neon Button */
+        .btn-analyze { background: linear-gradient(45deg, var(--secondary-glow), var(--primary-glow)); background-size: 200%; border: none; padding: 16px 20px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; color: white; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0, 242, 254, 0.4); }
+        .btn-analyze:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 0 25px rgba(0, 242, 254, 0.6); background-position: right center; }
+        
+        /* Dropdown Override */
+        details summary { cursor: pointer; color: var(--primary-glow); font-weight: 500; outline: none; padding-bottom: 10px; }
+        
+        /* Loader Animation */
+        .loader { border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid var(--primary-glow); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        /* Result Layout & Instagram Mockup */
+        .results-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; margin-top: 20px; }
+        @media(max-width: 768px) { .results-grid { grid-template-columns: 1fr; } }
+        
+        .ig-card { background: rgba(10, 15, 25, 0.8); border: 1px solid var(--glass-border); border-radius: 16px; max-width: 350px; margin: 0 auto; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .ig-header { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .ig-avatar { width: 35px; height: 35px; border-radius: 50%; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); margin-right: 12px; }
+        .ig-image { width: 100%; height: 250px; background: #1a1b26; display: flex; align-items: center; justify-content: center; position: relative; font-size: 45px; }
+        .ig-actions { padding: 12px 15px; font-size: 24px; letter-spacing: 12px; }
+        .ig-likes { padding: 0 15px; font-weight: bold; font-size: 14px; margin-bottom: 6px; }
+        .ig-caption { padding: 0 15px 20px; font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+        .ig-caption strong { color: var(--text-main); }
+        
+        /* Progress Bar & Badges */
+        .pred-badge { display: inline-block; padding: 12px 25px; border-radius: 30px; font-size: 22px; font-weight: 800; animation: pulse 2s infinite; text-transform: uppercase; letter-spacing: 1px; }
+        .pred-viral { background: rgba(40, 167, 69, 0.15); border: 1px solid #28a745; color: #2de05b; box-shadow: 0 0 20px rgba(40, 167, 69, 0.3); }
+        .pred-medium { background: rgba(255, 193, 7, 0.15); border: 1px solid #ffc107; color: #ffca28; box-shadow: 0 0 20px rgba(255, 193, 7, 0.3); }
+        .pred-not { background: rgba(220, 53, 69, 0.15); border: 1px solid #dc3545; color: #ff6b7b; box-shadow: 0 0 20px rgba(220, 53, 69, 0.3); }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        
+        .prob-bar-container { background: rgba(255,255,255,0.05); border-radius: 20px; height: 14px; width: 100%; overflow: hidden; border: 1px solid var(--glass-border); margin-top: 10px; }
+        .prob-bar-fill { height: 100%; background: linear-gradient(90deg, #ff0844, #ffb199); width: 0; transition: width 1.5s cubic-bezier(0.1, 0.8, 0.2, 1); box-shadow: 0 0 10px rgba(255, 8, 68, 0.6); }
+        .prob-bar-fill.high { background: linear-gradient(90deg, #0ba360, #3cba92); box-shadow: 0 0 10px rgba(11, 163, 96, 0.6); }
+        
+        /* Data Grid */
+        .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
+        .data-box { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; border: 1px solid var(--glass-border); text-align: center; transition: 0.3s; }
+        .data-box:hover { background: rgba(0,0,0,0.5); transform: translateY(-3px); border-color: rgba(255,255,255,0.15); }
+        .data-box h5 { margin: 0 0 8px 0; color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        .data-box p { margin: 0; font-size: 20px; font-weight: bold; color: white; }
+        
+        .tag { display: inline-block; padding: 5px 12px; background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 20px; font-size: 12px; color: var(--primary-glow); margin: 4px 4px 4px 0; }
+        .alert-warning { background: rgba(255, 193, 7, 0.1); color: #ffca28; padding: 15px; border-radius: 10px; margin-bottom: 25px; text-align: center; font-size: 14px; border: 1px solid rgba(255, 193, 7, 0.2); }
+        
+        .fade-in-up { animation: fadeInUp 0.6s ease-out forwards; opacity: 0; transform: translateY(20px); }
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <nav class="navbar">
+        <h1>🚀 Neural AI Predictor</h1>
+        <div class="nav-links">
+            <a href="/dashboard">📊 Dashboard</a>
+            <a href="/logout" class="logout">🚪 Logout</a>
+        </div>
+    </nav>
+
+    <div class="container fade-in-up">
+        <div class="glass-card">
+            <h2 style="text-align: center; margin-top: 0; font-size: 28px;">Analyze Post Virality</h2>
+            <p style="text-align: center; color: var(--text-muted); margin-bottom: 30px;">Deploy our advanced neural network to forecast social media reach and performance.</p>
+            
+            <form id="analyzeForm" action="/predict" method="POST" onsubmit="showLoader()">
+                <div class="form-group">
+                    <label>Paste Social Media Post Link (Instagram/Twitter)</label>
+                    <span class="input-icon">🔗</span>
+                    <input type="url" name="ig_url" placeholder="https://instagram.com/p/..." required>
+                </div>
+                
+                <details style="margin-bottom: 25px;">
+                    <summary>⚙️ Advanced: Manual Data Override</summary>
+                    <div style="padding-top: 15px; border-top: 1px solid var(--glass-border); margin-top: 10px; display: grid; grid-template-columns: 1fr; gap: 15px;">
+                        <input type="text" name="caption" placeholder="Enter exact post caption..." style="padding-left: 15px;">
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                            <input type="number" name="followers" placeholder="Followers" style="padding-left: 15px;">
+                            <input type="number" name="likes" placeholder="Likes" style="padding-left: 15px;">
+                            <input type="number" name="comments" placeholder="Comments" style="padding-left: 15px;">
+                        </div>
+                    </div>
+                </details>
+                
+                <button type="submit" class="btn-analyze" id="submitBtn">✨ Run AI Analysis</button>
+                <div class="loader" id="loader"></div>
+            </form>
+        </div>
+
+        {% if prediction_text %}
+        <div class="fade-in-up" id="resultsArea" style="animation-delay: 0.2s;">
+            {% if extraction_notice %}
+            <div class="alert-warning">{{ extraction_notice }}</div>
+            {% endif %}
+
+            <div class="results-grid">
+                <!-- Dark Mode Instagram Preview -->
+                <div>
+                    <div class="ig-card">
+                        <div class="ig-header">
+                            <div class="ig-avatar"></div>
+                            <div style="font-weight: 600; font-size: 14px;">{{ username }}</div>
+                        </div>
+                        <div class="ig-image">
+                            📸
+                            <div style="position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 6px 15px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); font-size: 12px; font-weight: bold;">
+                                {% if status_class == 'not-viral' %}🔴 Low Reach{% elif status_class == 'medium' %}🟡 Medium Reach{% else %}🟢 High Reach{% endif %}
+                            </div>
+                        </div>
+                        <div class="ig-actions">
+                            <span style="color: #ed4956; margin-right: 15px;">❤️</span><span style="margin-right: 15px;">💬</span><span>↗️</span>
+                        </div>
+                        <div class="ig-likes">{{ "{:,}".format(likes) }} likes</div>
+                        <div class="ig-caption">
+                            <strong>{{ username }}</strong> {{ caption }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Diagnostics Board -->
+                <div>
+                    <div class="glass-card" style="margin-bottom: 0; height: 100%; box-sizing: border-box;">
+                        <h3 style="margin-top: 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px;">
+                            📊 Diagnostics Report
+                            <span class="pred-badge pred-{{ status_class }}">
+                                {{ prediction_text }}
+                            </span>
+                        </h3>
+                        
+                        <div style="margin: 25px 0;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <strong style="color: var(--text-muted);">Neural Probability Score</strong>
+                                <strong style="color: white; font-size: 18px;">{{ probability }}%</strong>
+                            </div>
+                            <div class="prob-bar-container">
+                                <div class="prob-bar-fill {% if probability > 50 %}high{% endif %}" data-width="{{ probability }}%"></div>
+                            </div>
+                        </div>
+
+                        <div class="data-grid">
+                            <div class="data-box">
+                                <h5>Followers</h5>
+                                <p>{{ "{:,}".format(followers) }}</p>
+                            </div>
+                            <div class="data-box">
+                                <h5>Likes</h5>
+                                <p>{{ "{:,}".format(likes) }}</p>
+                            </div>
+                            <div class="data-box">
+                                <h5>Comments</h5>
+                                <p>{{ "{:,}".format(comments) }}</p>
+                            </div>
+                            <div class="data-box">
+                                <h5>Engagement Score</h5>
+                                <p>{{ engagement_score }}%</p>
+                            </div>
+                            <div class="data-box">
+                                <h5>NLP Sentiment</h5>
+                                <p>{{ sentiment }}</p>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 25px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 10px; border-left: 4px solid var(--primary-glow);">
+                            <h5 style="margin: 0 0 5px 0; color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">🧠 AI Reasoning</h5>
+                            <p style="margin: 0; font-size: 14px; line-height: 1.5; color: white;">{{ reasoning }}</p>
+                        </div>
+
+                        <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid var(--glass-border);">
+                            <h4 style="margin: 0 0 15px 0; color: var(--text-main);">#️⃣ Hash-Intelligence Engine</h4>
+                            <div style="margin-bottom: 12px;">
+                                <span style="color: var(--text-muted); font-size: 13px; display: block; margin-bottom: 5px;">Extracted Tags:</span>
+                                {% for tag in extracted_hashtags %}<span class="tag" style="border-color: rgba(255,255,255,0.2); color: #ccc;">{{ tag }}</span> {% else %}<span style="color: #666; font-size: 13px;">None found</span>{% endfor %}
+                            </div>
+                            <div>
+                                <span style="color: var(--text-muted); font-size: 13px; display: block; margin-bottom: 5px;">AI Trend Suggestions:</span>
+                                {% for tag in hashtags['trending'] %}<span class="tag">{{ tag }}</span>{% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Animate Progress Bar on Load -->
+            <script>
+                setTimeout(() => {
+                    document.querySelectorAll('.prob-bar-fill').forEach(el => {
+                        el.style.width = el.getAttribute('data-width');
+                    });
+                }, 100);
+            </script>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function showLoader() {
+            document.getElementById('loader').style.display = 'block';
+            const btn = document.getElementById('submitBtn');
+            btn.style.opacity = '0.7';
+            btn.innerHTML = '✨ Processing Neural Nets...';
+            if(document.getElementById('resultsArea')){
+                document.getElementById('resultsArea').style.opacity = '0.5';
+            }
+        }
+    </script>
+</body>
+</html>
